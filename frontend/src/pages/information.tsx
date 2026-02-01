@@ -1,5 +1,6 @@
 
 import { motion } from "framer-motion";
+import TollBoothGame from "../components/TollBoothGame";
 
 const InfoCard = ({ title, delay, children }: { title: string, delay: number, children: React.ReactNode }) => (
   <motion.div
@@ -19,14 +20,19 @@ const InfoCard = ({ title, delay, children }: { title: string, delay: number, ch
 
 export default function Information() {
   return (
-    <div className="min-h-screen bg-black text-white font-mono selection:bg-emerald-500/30 overflow-x-hidden">
-      {/* Background Effects */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(16,185,129,0.1),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
-      </div>
+    <div className="bg-black text-white font-mono selection:bg-emerald-500/30 overflow-x-hidden">
+      {/* Interactive Sandwich Attack Game */}
+      <TollBoothGame />
 
-      <main className="relative z-10 max-w-7xl mx-auto p-4 md:p-8 pt-12 md:pt-20">
+      {/* Info Content Section */}
+      <div id="info-content" className="min-h-screen relative">
+        {/* Background Effects */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(16,185,129,0.1),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
+        </div>
+
+        <main className="relative z-10 max-w-7xl mx-auto p-4 md:p-8 pt-12 md:pt-20">
         <header className="flex flex-col md:flex-row md:items-end justify-between mb-12 border-b border-gray-800 pb-6">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -137,7 +143,8 @@ export default function Information() {
         <footer className="mt-20 border-t border-gray-900 pt-8 text-center text-xs text-gray-600">
           <p>SYSTEM ID: GW-8829 // DISCONNECTED FROM MAINNET</p>
         </footer>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

@@ -5,8 +5,8 @@ import { RISK_CONFIGS } from "../utils/constants";
 import { useSlippage } from "../hooks/useSlippage";
 
 export default function SlippageEstimates() {
-  const [selectedToken, setSelectedToken] = useState('ETH');
-  const { slippage, risk, loading } = useSlippage(selectedToken);
+  const [selectedToken, _setSelectedToken] = useState('ETH');
+  const { slippage, risk, loading: _loading } = useSlippage(selectedToken);
   const config = RISK_CONFIGS[risk];
 
   return (
