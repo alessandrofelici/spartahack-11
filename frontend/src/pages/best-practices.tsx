@@ -1,15 +1,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// Mock response capability
-const MOCK_RESPONSES = [
-  "ACKNOWLEDGED. Analyzing best practices... Recommendation: Ensure semantic HTML structures.",
-  "QUERY RECEIVED. Optimization protocols suggest code-splitting to reduce bundle size.",
-  "SECURITY ALERT. Always sanitize user inputs to prevent XSS vectors.",
-  "PERFORMANCE SCAN. Lazy loading images is recommended for bandwidth efficiency.",
-  "LINTING REQUIRED. Enforce consistent style guides to minimize syntax errors.",
-];
+import axios from 'axios';
 
 interface Message {
   id: string;
@@ -17,6 +9,10 @@ interface Message {
   sender: 'user' | 'bot';
   timestamp: Date;
 }
+
+// OpenRouter API - direct call from frontend
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export default function BestPractices() {
   const [messages, setMessages] = useState<Message[]>([
@@ -39,6 +35,29 @@ export default function BestPractices() {
     scrollToBottom();
   }, [messages, isTyping]);
 
+  const callOpenRouterAPI = async (prompt: string): Promise<string> => {
+    if (!OPENROUTER_API_KEY) {
+      return "ERROR: VITE_OPENROUTER_API_KEY is missing. Please check your .env file.";
+    }
+
+    try {
+      const response = await axios.post(OPENROUTER_URL, {
+        model: 'anthropic/claude-sonnet-4',
+        messages: [{ role: 'user', content: prompt }],
+      }, {
+        headers: {
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      return response.data.choices[0].message.content;
+    } catch (error) {
+      console.error("OpenRouter API Error:", error);
+      return "SYSTEM FAILURE: Unable to connect to neural net. " + (error instanceof Error ? error.message : String(error));
+    }
+  };
+
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!inputValue.trim()) return;
@@ -54,18 +73,18 @@ export default function BestPractices() {
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate bot thinking time
-    setTimeout(() => {
-      const randomResponse = MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
-      const newBotMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: randomResponse,
-        sender: 'bot',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, newBotMessage]);
-      setIsTyping(false);
-    }, 1200);
+    // Call OpenRouter API via backend
+    const responseText = await callOpenRouterAPI(inputValue);
+
+    const newBotMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      text: responseText,
+      sender: 'bot',
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, newBotMessage]);
+    setIsTyping(false);
   };
 
   return (
@@ -110,8 +129,8 @@ export default function BestPractices() {
                 >
                   <div
                     className={`max-w-[85%] md:max-w-[70%] p-4 text-sm md:text-base border ${message.sender === 'user'
-                        ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-100 rounded-bl-xl'
-                        : 'bg-gray-800/40 border-gray-700 text-gray-300 rounded-br-xl'
+                      ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-100 rounded-bl-xl'
+                      : 'bg-gray-800/40 border-gray-700 text-gray-300 rounded-br-xl'
                       }`}
                   >
                     <div className="text-[10px] mb-1 opacity-50 uppercase tracking-wider font-bold">
