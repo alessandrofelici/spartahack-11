@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { TOKEN_LIST } from '../utils/constants';
 
 interface Resource {
   title: string;
@@ -64,26 +65,50 @@ const InfoCard = ({ title, delay, children }: { title: string; delay: number; ch
 );
 
 export default function Sources() {
-  const [tradeAmount, setTradeAmount] = useState('1.0');
+  const [tradeAmount, setTradeAmount] = useState('100.0');
   const [ticker, setTicker] = useState('ETH');
   const [slippageTolerance, setSlippageTolerance] = useState('0.5');
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  const calculateProtection = () => {
+  // New: Auto-adjust slippage based on token volatility to show "real" risk
+  useEffect(() => {
+    switch (ticker) {
+        case 'PEPE':
+            setSlippageTolerance('2.5'); // High volatility
+            break;
+        case 'SHIB':
+            setSlippageTolerance('1.5'); // Medium volatility
+            break;
+        case 'USDC':
+            setSlippageTolerance('0.1'); // Stablecoin
+            break;
+        default:
+            setSlippageTolerance('0.5'); // Standard (ETH)
+            break;
+    }
+  }, [ticker]);
+
+  // Improved Calculation Logic
+  const calculateSimulation = () => {
     const amount = parseFloat(tradeAmount) || 0;
     const slippage = parseFloat(slippageTolerance) || 0;
-    const maxPrice = amount * (1 + slippage / 100);
-    const minPrice = amount * (1 - slippage / 100);
+    
+    // educational simplifiction: 
+    // "Minimum Guaranteed" is the worst case scenario allowed by the contract
+    const minReceived = amount * (1 - slippage / 100);
+    // "Value at Risk" is the difference between ideal and worst case
+    const valueAtRisk = amount - minReceived;
     
     return {
-      maxPrice: maxPrice.toFixed(4),
-      minPrice: minPrice.toFixed(4),
-      protectionLevel: slippage < 0.5 ? 'HIGH' : slippage < 1.5 ? 'MEDIUM' : 'LOW'
+      expected: amount.toFixed(4),
+      minReceived: minReceived.toFixed(4),
+      valueAtRisk: valueAtRisk.toFixed(4),
+      protectionLevel: slippage <= 0.5 ? 'HIGH' : slippage <= 1.5 ? 'MEDIUM' : 'LOW'
     };
   };
 
-  const protection = calculateProtection();
+  const sim = calculateSimulation();
 
   const filteredResources = selectedCategory === 'all' 
     ? RESOURCES 
@@ -98,6 +123,24 @@ export default function Sources() {
 
   return (
     <div className="bg-black text-white font-mono selection:bg-emerald-500/30 min-h-screen">
+      {/* CSS to hide the ugly white increment buttons on number inputs */}
+      <style>{`
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+        /* Custom Scrollbar for Select Dropdown in Chrome */
+        select option {
+            background-color: #1a1a1a;
+            color: white;
+            padding: 10px;
+        }
+      `}</style>
+
       {/* Background Effects */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(16,185,129,0.1),transparent_50%)]" />
@@ -153,13 +196,13 @@ export default function Sources() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Input Section */}
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
                 <label className="text-xs text-gray-500 uppercase tracking-widest block mb-2">Trade Type</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setTradeType('buy')}
-                    className={`flex-1 px-4 py-3 rounded-lg border transition-all duration-200 ${
+                    className={`flex-1 px-4 py-3 rounded-lg border transition-all duration-200 text-sm font-bold ${
                       tradeType === 'buy'
                         ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
                         : 'bg-gray-900/20 border-gray-800 text-gray-500 hover:border-gray-700'
@@ -169,7 +212,7 @@ export default function Sources() {
                   </button>
                   <button
                     onClick={() => setTradeType('sell')}
-                    className={`flex-1 px-4 py-3 rounded-lg border transition-all duration-200 ${
+                    className={`flex-1 px-4 py-3 rounded-lg border transition-all duration-200 text-sm font-bold ${
                       tradeType === 'sell'
                         ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
                         : 'bg-gray-900/20 border-gray-800 text-gray-500 hover:border-gray-700'
@@ -180,27 +223,40 @@ export default function Sources() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-widest block mb-2">Token Symbol</label>
-                <input
-                  type="text"
-                  value={ticker}
-                  onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                  placeholder="ETH"
-                  className="w-full px-4 py-3 bg-gray-900/20 border border-gray-800 rounded-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none text-emerald-400 font-bold"
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {/* TOKEN DROPDOWN (Fixed Styling) */}
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-widest block mb-2">Token</label>
+                  <div className="relative">
+                    <select
+                        value={ticker}
+                        onChange={(e) => setTicker(e.target.value)}
+                        className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-800 rounded-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none text-emerald-400 font-bold appearance-none cursor-pointer"
+                    >
+                        {TOKEN_LIST.map(t => (
+                            <option key={t.value} value={t.value} className="bg-[#1a1a1a] text-white py-2">
+                                {t.symbol}
+                            </option>
+                        ))}
+                    </select>
+                    {/* Custom Arrow */}
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </div>
+                  </div>
+                </div>
 
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-widest block mb-2">Amount</label>
-                <input
-                  type="number"
-                  value={tradeAmount}
-                  onChange={(e) => setTradeAmount(e.target.value)}
-                  placeholder="1.0"
-                  step="0.01"
-                  className="w-full px-4 py-3 bg-gray-900/20 border border-gray-800 rounded-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none text-white"
-                />
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-widest block mb-2">Amount</label>
+                  <input
+                    type="number"
+                    value={tradeAmount}
+                    onChange={(e) => setTradeAmount(e.target.value)}
+                    placeholder="1.0"
+                    step="0.01"
+                    className="w-full px-4 py-3 bg-gray-900/20 border border-gray-800 rounded-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none text-white"
+                  />
+                </div>
               </div>
 
               <div>
@@ -213,14 +269,18 @@ export default function Sources() {
                   onChange={(e) => setSlippageTolerance(e.target.value)}
                   placeholder="0.5"
                   step="0.1"
-                  className="w-full px-4 py-3 bg-gray-900/20 border border-gray-800 rounded-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none text-white"
+                  className="w-full px-4 py-3 bg-gray-900/20 border border-gray-800 rounded-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none text-white font-bold text-lg"
                 />
-                <div className="flex gap-2 mt-2">
-                  {['0.5', '1.0', '2.0'].map((val) => (
+                <div className="flex gap-2 mt-3">
+                  {['0.1', '0.5', '1.0', '2.5'].map((val) => (
                     <button
                       key={val}
                       onClick={() => setSlippageTolerance(val)}
-                      className="px-3 py-1 bg-gray-900/40 border border-gray-800 rounded text-[10px] text-gray-400 hover:border-emerald-500/50 hover:text-emerald-400 transition-all"
+                      className={`flex-1 py-1.5 rounded text-[10px] border transition-all ${
+                        slippageTolerance === val 
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
+                        : 'bg-gray-900/40 border-gray-800 text-gray-400 hover:border-gray-600'
+                      }`}
                     >
                       {val}%
                     </button>
@@ -230,59 +290,60 @@ export default function Sources() {
             </div>
 
             {/* Output Section */}
-            <div className="bg-black/50 border border-gray-800 rounded-lg p-6">
-              <h3 className="text-xs text-gray-500 uppercase tracking-widest mb-4">Trade Summary</h3>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Action:</span>
-                  <span className="text-emerald-400 font-bold uppercase">{tradeType} {ticker}</span>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Amount:</span>
-                  <span className="text-white font-bold">{tradeAmount} {ticker}</span>
-                </div>
-
-                <div className="border-t border-gray-800 pt-4 mt-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-400 text-sm">Max Price Impact:</span>
-                    <span className="text-white">{protection.maxPrice} {ticker}</span>
+            <div className="bg-black/50 border border-gray-800 rounded-xl p-6 flex flex-col justify-between">
+              <div>
+                <h3 className="text-xs text-gray-500 uppercase tracking-widest mb-6 flex justify-between items-center">
+                  <span>Simulation Results</span>
+                  <div className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    sim.protectionLevel === 'HIGH' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' :
+                    sim.protectionLevel === 'MEDIUM' ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400' :
+                    'border-red-500/30 bg-red-500/10 text-red-400'
+                  }`}>
+                    {sim.protectionLevel} PROTECTION
                   </div>
-                  
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-400 text-sm">Min Price Impact:</span>
-                    <span className="text-white">{protection.minPrice} {ticker}</span>
-                  </div>
-
+                </h3>
+                
+                <div className="space-y-5">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-400 text-sm">Protection Level:</span>
-                    <span className={`font-bold ${
-                      protection.protectionLevel === 'HIGH' ? 'text-emerald-400' :
-                      protection.protectionLevel === 'MEDIUM' ? 'text-yellow-400' :
-                      'text-red-400'
-                    }`}>
-                      {protection.protectionLevel}
+                    <span className="text-gray-400 text-sm">Expected Output:</span>
+                    <span className="text-white font-bold text-lg">{sim.expected} {ticker}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center relative">
+                    <span className="text-gray-400 text-sm">Minimum Guaranteed:</span>
+                    <span className="text-emerald-400 font-bold text-lg border-b border-dashed border-emerald-500/30 cursor-help" title="The absolute minimum you will receive">
+                      {sim.minReceived} {ticker}
                     </span>
                   </div>
-
-                  <div className="bg-gray-900/50 border border-gray-800 rounded p-3 mt-3">
-                    <p className="text-[10px] text-gray-400 leading-relaxed mb-2">
-                      <span className="text-emerald-400 font-bold">How is this calculated?</span>
-                    </p>
-                    <div className="space-y-1 text-[10px] text-gray-500">
-                      <div>• <span className="text-emerald-400">HIGH</span>: Slippage &lt; 0.5%</div>
-                      <div>• <span className="text-yellow-400">MEDIUM</span>: Slippage 0.5% - 1.5%</div>
-                      <div>• <span className="text-red-400">LOW</span>: Slippage &gt; 1.5%</div>
+                  
+                  {/* Value at Risk Visualization */}
+                  <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-800">
+                    <div className="flex justify-between text-[10px] mb-1">
+                       <span className="text-gray-500">Value at Risk (Max Slippage)</span>
+                       <span className="text-red-400 font-mono">-{sim.valueAtRisk} {ticker}</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
+                       <div 
+                         className={`h-full rounded-full transition-all duration-500 ${
+                           sim.protectionLevel === 'HIGH' ? 'bg-emerald-500' :
+                           sim.protectionLevel === 'MEDIUM' ? 'bg-yellow-500' : 'bg-red-500'
+                         }`}
+                         style={{ width: `${Math.min(parseFloat(slippageTolerance) * 10, 100)}%` }}
+                       />
                     </div>
                   </div>
-                </div>
 
-                <div className="bg-emerald-900/10 border border-emerald-500/20 rounded p-3 mt-4">
-                  <p className="text-[10px] text-emerald-400 leading-relaxed">
-                    ⚡ With {slippageTolerance}% slippage, your transaction will fail if the price moves more than expected, 
-                    protecting you from paying {parseFloat(slippageTolerance) > 1 ? 'excessive' : 'minimal'} extra fees.
-                  </p>
+                </div>
+              </div>
+
+              <div className="bg-emerald-900/10 border border-emerald-500/20 rounded p-4 mt-6">
+                <div className="flex items-start gap-3">
+                   <span className="text-emerald-500 text-lg mt-0.5">🛡️</span>
+                   <p className="text-xs text-emerald-100/80 leading-relaxed">
+                     Switching to <strong>{ticker}</strong> automatically adjusted your estimated slippage to <strong>{slippageTolerance}%</strong> based on its volatility profile.
+                     <br/><br/>
+                     You are risking <strong>{sim.valueAtRisk} {ticker}</strong>. If this amount is too high, lower your slippage tolerance.
+                   </p>
                 </div>
               </div>
             </div>
@@ -355,8 +416,6 @@ export default function Sources() {
                 </div>
               </div>
             </InfoCard>
-
-
 
             <InfoCard title="Monitor Gas Prices" delay={0.7}>
               <p>

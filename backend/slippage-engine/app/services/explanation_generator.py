@@ -1,9 +1,5 @@
-# backend/slippage-engine/app/services/explanation_generator.py
-
 from typing import List, Dict, Any
-
-# Assuming ExplanationFactor and Explanation are imported dataclasses/models from schemas.py
-from ..schemas import Explanation, ExplanationFactor # Adjust import path if needed
+from ..schemas import Explanation, ExplanationFactor
 
 class ExplanationGenerator:
     def generate(
@@ -44,7 +40,7 @@ class ExplanationGenerator:
         
         factors.append(ExplanationFactor(
             name="Bot Activity",
-            value=f"{bot_level} ({bot_score.toFixed(2)})",
+            value=f"{bot_level} ({bot_score:.2f})",
             impact=f"+{bot_adjustment:.1%}" if bot_adjustment > 0 else "None"
         ))
         
@@ -65,14 +61,7 @@ class ExplanationGenerator:
             impact=gas_impact
         ))
         
-        # --- Tradeoff Summary ---
-        tradeoff_summary = (
-            f"At {recommended_slippage:.1%} slippage, estimated max MEV extraction is ~$15. "
-            f"Lowering to {alternative_slippage_low:.1%} could reduce extraction to ~$5, but increases trade failure risk by ~15%."
-        ) # This text should be dynamically generated based on calculations.
-
         return Explanation(
             summary="This recommendation balances trade execution probability with minimizing MEV extraction risk.",
-            factors=factors,
-            # tradeoff=tradeoff_summary # Add tradeoff if calculated here
+            factors=factors
         )

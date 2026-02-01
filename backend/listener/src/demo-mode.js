@@ -88,9 +88,15 @@ function initialize(onTransaction) {
   }
   
   if (scenarios.length > 0) {
-    // Load first scenario by default
-    currentScenario = scenarios[0];
-    console.log(`   📂 Default scenario: ${currentScenario.name}`);
+    // HACKATHON FIX: Prioritize the 'hackathon-scenario' if it exists
+    const hackathonDemo = scenarios.find(s => s.name.includes('hackathon'));
+    if (hackathonDemo) {
+        currentScenario = hackathonDemo;
+        console.log(`   📂 Defaulting to HACKATHON demo: ${currentScenario.name}`);
+    } else {
+        currentScenario = scenarios[0];
+        console.log(`   📂 Default scenario: ${currentScenario.name}`);
+    }
   }
   
   return scenarios.length > 0;

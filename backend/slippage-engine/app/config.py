@@ -1,28 +1,25 @@
-# backend/slippage-engine/app/config.py
-
 from pydantic_settings import BaseSettings
-from typing import List
 
 class Settings(BaseSettings):
-    # API Keys
-    coingecko_api_key: str | None = None # Optional
-
-    # URLs
-    uniswap_subgraph_url: str
-    listener_ws_url: str
-    coingecko_api_url: str = "https://api.coingecko.com/api/v3" # Default
-
-    # Server Configuration
+    # App Settings
+    app_name: str = "MEV Weather Slippage Engine"
     slippage_api_port: int = 8000
-    cors_origins: List[str] = ["http://localhost:5173"] # Default frontend URL
+    cors_origins: list = ["http://localhost:5173", "http://localhost:3000"]
 
-    # Global Settings
-    eth_price_usd: float = 2000.0 # Fallback ETH price
+    # External APIs
+    coingecko_api_url: str = "https://api.coingecko.com/api/v3"
+    coingecko_api_key: str = "" 
+    uniswap_subgraph_url: str = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2"
+    listener_ws_url: str = "ws://localhost:3001"
 
+    # LLM Settings
+    groq_api_key: str = "" # <--- CHANGED NAME
+
+    # Defaults
+    eth_price_usd: float = 2500.00
+    
     class Config:
-        # Load variables from .env file
-        env_file = '.env'
-        env_file_encoding = 'utf-8'
+        env_file = ".env"
+        extra = "ignore"
 
-# Instantiate settings globally
 settings = Settings()

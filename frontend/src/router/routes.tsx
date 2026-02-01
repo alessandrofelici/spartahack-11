@@ -14,6 +14,8 @@ export const router = createBrowserRouter([
       { path: "best-practices", element: <BestPractices /> },
       { path: "slippage-estimates", element: <SlippageEstimates /> },
       { path: "sources", element: <Sources /> },
+      
+      { path: "assistant", element: <BestPractices /> }, 
     ],
   },
 ]);

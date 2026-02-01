@@ -1,7 +1,5 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
 
 interface Message {
   id: string;
@@ -9,10 +7,6 @@ interface Message {
   sender: 'user' | 'bot';
   timestamp: Date;
 }
-
-// OpenRouter API - direct call from frontend
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export default function BestPractices() {
   const [messages, setMessages] = useState<Message[]>([
@@ -35,26 +29,25 @@ export default function BestPractices() {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const callOpenRouterAPI = async (prompt: string): Promise<string> => {
-    if (!OPENROUTER_API_KEY) {
-      return "ERROR: VITE_OPENROUTER_API_KEY is missing. Please check your .env file.";
-    }
-
+  const callBackendAPI = async (prompt: string): Promise<string> => {
     try {
-      const response = await axios.post(OPENROUTER_URL, {
-        model: 'anthropic/claude-sonnet-4',
-        messages: [{ role: 'user', content: prompt }],
-      }, {
+      const response = await fetch('http://localhost:8000/api/chat/', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
           'Content-Type': 'application/json',
-        }
+        },
+        body: JSON.stringify({ message: prompt }),
       });
 
-      return response.data.choices[0].message.content;
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.content; // The backend returns { role: "assistant", content: "..." }
     } catch (error) {
-      console.error("OpenRouter API Error:", error);
-      return "SYSTEM FAILURE: Unable to connect to neural net. " + (error instanceof Error ? error.message : String(error));
+      console.error("Chat API Error:", error);
+      return "SYSTEM FAILURE: Unable to connect to neural core. Ensure backend logic is active.";
     }
   };
 
@@ -73,8 +66,8 @@ export default function BestPractices() {
     setInputValue('');
     setIsTyping(true);
 
-    // Call OpenRouter API via backend
-    const responseText = await callOpenRouterAPI(inputValue);
+    // Call Local Python Backend
+    const responseText = await callBackendAPI(newUserMessage.text);
 
     const newBotMessage: Message = {
       id: (Date.now() + 1).toString(),
@@ -114,7 +107,7 @@ export default function BestPractices() {
 
         {/* Chat Area */}
         <div className="flex-1 bg-gray-900/20 backdrop-blur-sm rounded-none border-x border-t border-gray-800 overflow-hidden flex flex-col relative">
-          {/* CRT Scanline Effect Overlay - Optional, keeping it subtle or removing if too distracting */}
+          {/* CRT Scanline Effect Overlay */}
           <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_2px,3px_100%] opacity-10 z-20"></div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-emerald-900 scrollbar-track-transparent">
