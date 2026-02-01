@@ -1,0 +1,39 @@
+{
+  "name": "mev-listener",
+  "version": "1.0.0",
+  "description": "Mempool listener for MEV Weather",
+  "homepage": "https://github.com/alessandrofelici/spartahack-11#readme",
+  "bugs": {
+    "url": "https://github.com/alessandrofelici/spartahack-11/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alessandrofelici/spartahack-11.git"
+  },
+  "license": "MIT",
+  "author": "Armando Zavala-Campos",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "node tests/decoder.test.js",
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
+    "ethers": "^6.16.0",
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.2",
+    "nodemon": "^3.1.11",
+    "prettier": "^3.8.1"
+  }
+}
