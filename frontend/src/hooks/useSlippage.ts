@@ -47,7 +47,14 @@ interface SlippageAPIResponse {
 }
 
 export const useSlippage = (token: string) => {
-  const [data, setData] = useState<SlippageData>({ slippage: 0.1, risk: 'low', loading: true });
+  // Mapping symbols to addresses for the backend
+  const ADDRESS_MAP: Record<string, string> = {
+    'ETH': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 
+    'PEPE': '0x6982508145454Ce325dDbE47a25d4ec3d2311933',
+    'SHIB': '0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE'
+  };
+
+  const [data, setData] = useState<SlippageData>({ slippage: 0.5, risk: 'low', loading: true });
 
   /* ========== BACKEND INTEGRATION FUNCTION ==========
    * Uncomment this function when backend is ready
@@ -103,9 +110,21 @@ export const useSlippage = (token: string) => {
       if (mockSlippage > 0.5) risk = 'moderate';
       if (mockSlippage > 1.5) risk = 'severe';
 
-      setData({ slippage: mockSlippage, risk, loading: false });
-    }, 3000);
+            const result = await response.json();
+            
+            setData({
+                // Convert 0.012 -> 1.2 for display
+                slippage: parseFloat((result.recommended_slippage * 100).toFixed(2)), 
+                risk: result.risk_level.toLowerCase() as 'low' | 'moderate' | 'severe',
+                loading: false
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
+    fetchSlippage();
+    const interval = setInterval(fetchSlippage, 5000); // Poll every 5s
     return () => clearInterval(interval);
     /* ========== END MOCK DATA ========== */
   }, [token]);

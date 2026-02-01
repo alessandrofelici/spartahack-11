@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import slippage, health
+from .routers import slippage, health, market_data
 from .config import settings # Load settings from config.py
 
 # Initialize FastAPI app
@@ -29,6 +29,7 @@ app.add_middleware(
 # --------------------------------------------------
 app.include_router(slippage.router, prefix="/api/slippage")
 app.include_router(health.router, prefix="/health")
+app.include_router(market_data.router, prefix="/api")
 
 # --------------------------------------------------
 # Root endpoint (optional)
