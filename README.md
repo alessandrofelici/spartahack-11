@@ -1,1 +1,3 @@
-# spartahack-11
+# GapWrap
+
+Closing the slippage "gap" while "wrapping" the transaction in protection
