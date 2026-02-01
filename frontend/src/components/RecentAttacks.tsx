@@ -1,6 +1,17 @@
 import { motion, AnimatePresence } from 'framer-motion';
 
-const RecentAttacks = ({ attacks }) => (
+interface Attack {
+  id: string | number;
+  time: string;
+  amount: string;
+  loss: string;
+}
+
+interface RecentAttacksProps {
+  attacks: Attack[];
+}
+
+const RecentAttacks: React.FC<RecentAttacksProps> = ({ attacks }) => (
   <div className="space-y-3">
     <AnimatePresence mode="popLayout">
       {attacks.map((attack) => (

@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react';
 
-export const useSlippage = (token) => {
-  const [data, setData] = useState({ slippage: 0.1, risk: 'low', loading: true });
+interface SlippageData {
+  slippage: number;
+  risk: 'low' | 'moderate' | 'severe';
+  loading: boolean;
+}
+
+export const useSlippage = (token: string) => {
+  const [data, setData] = useState<SlippageData>({ slippage: 0.1, risk: 'low', loading: true });
 
   useEffect(() => {
     // Simulated API response while waiting for backend
     const interval = setInterval(() => {
-      const mockSlippage = (Math.random() * 3).toFixed(2);
-      let risk = 'low';
+      const mockSlippage = parseFloat((Math.random() * 3).toFixed(2));
+      let risk: 'low' | 'moderate' | 'severe' = 'low';
       if (mockSlippage > 0.5) risk = 'moderate';
       if (mockSlippage > 1.5) risk = 'severe';
 
