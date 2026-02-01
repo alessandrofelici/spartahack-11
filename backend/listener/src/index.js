@@ -13,7 +13,7 @@ let startTime = null;
 async function main() {
   console.log('\n╔═══════════════════════════════════════════════════════════╗');
   console.log('║                                                           ║');
-  console.log('║                    MEV WEATHER                            ║');
+  console.log('║                    Project                            ║');
   console.log('║            Real-Time Trading Conditions                   ║');
   console.log('║                                                           ║');
   console.log('╚═══════════════════════════════════════════════════════════╝\n');
@@ -21,7 +21,7 @@ async function main() {
   // Log configuration
   logConfig();
   
-  console.log(' Starting MEV Weather...\n');
+  console.log(' Starting Project...\n');
   
   startTime = Date.now();
   
@@ -47,7 +47,7 @@ async function main() {
   
   console.log('\n╔═══════════════════════════════════════════════════════════╗');
   console.log('║                                                           ║');
-  console.log(`║     MEV WEATHER IS RUNNING                             ║`);
+  console.log(`║     Project IS RUNNING                             ║`);
   console.log('║                                                           ║');
   console.log(`║     Started in ${elapsed} seconds                                  ║`);
   console.log(`║     WebSocket: ws://localhost:${config.server.port}                    ║`);
@@ -93,7 +93,7 @@ function displayStatus() {
   console.log('║                    STATUS UPDATE                          ║');
   console.log('╠═══════════════════════════════════════════════════════════╣');
   console.log(`║  Uptime:              ${uptime}s                              ║`);
-  console.log(`║  Connected to Alchemy: ${mempoolStats.connected ? '✅' : '❌'}                               ║`);
+  console.log(`║  Connected to Alchemy: ${mempoolStats.connected ? 'Connected' : 'Not Connected'}                               ║`);
   console.log(`║  Transactions seen:    ${mempoolStats.totalTransactionsReceived}                           ║`);
   console.log(`║  Transactions decoded: ${mempoolStats.totalTransactionsDecoded}                           ║`);
   console.log(`║  Sandwiches detected:  ${aggregatorStats.total_sandwiches_detected}                            ║`);
