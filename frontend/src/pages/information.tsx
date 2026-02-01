@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 
 const InfoCard = ({ title, delay, children }: { title: string, delay: number, children: React.ReactNode }) => (
