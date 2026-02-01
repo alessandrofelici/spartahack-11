@@ -1,3 +1,3 @@
 # GapWrap
 
-## Closing the slippage "gap" while "wrapping" the transaction in protection
+Closing the slippage "gap" while "wrapping" the transaction in protection
