@@ -44,6 +44,15 @@ const Layout = () => {
               >
                 Assistant
               </NavLink>
+              <NavLink
+                to="/sources"
+                className={({ isActive }) =>
+                  `text-[10px] md:text-xs font-bold uppercase tracking-widest transition-all duration-200 px-3 py-1 rounded hover:bg-gray-800/50 ${isActive ? 'text-emerald-400 border border-emerald-500/30 bg-emerald-900/10' : 'text-gray-500 hover:text-gray-300 border border-transparent'
+                  }`
+                }
+              >
+                Sources
+              </NavLink>
             </div>
           </div>
         </div>
