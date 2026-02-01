@@ -8,11 +8,13 @@ const mempoolListener = require('./mempool-listener');
 const pairAggregator = require('./pair-aggregator');
 const webSocketServer = require('./websocket-server');
 const demoMode = require('./demo-mode');
+const readline = require('readline');
 
 // --------------------------------------------------
 // Application state
 // --------------------------------------------------
 let isShuttingDown = false;
+let rl = null;
 
 // --------------------------------------------------
 // Main initialization function
@@ -78,9 +80,8 @@ async function main() {
           console.log(`      └─ Pair: ${s.pair}, Txs: ${s.transactionCount}, Duration: ${s.duration}s`);
         });
         
-        // Auto-start first scenario
-        console.log('\n   Starting first scenario automatically...');
-        demoMode.play();
+        // DON'T auto-start - wait for user input
+        console.log('\n   Demo mode ready. Use commands below to control playback.');
       } else {
         console.log('   ⚠️  No demo scenarios found. Create JSON files in demo-data/');
       }
@@ -110,11 +111,162 @@ async function main() {
       webSocketServer.broadcastPairsList();
     }, 1000);
     
+    // Start interactive controls if in demo mode
+    if (config.features.demoMode) {
+      startInteractiveControls();
+    }
+    
   } catch (error) {
     console.error('\n❌ Initialization failed:', error.message);
     console.error(error.stack);
     process.exit(1);
   }
+}
+
+// --------------------------------------------------
+// Interactive demo controls
+// --------------------------------------------------
+function startInteractiveControls() {
+  rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  
+  printDemoHelp();
+  promptCommand();
+}
+
+function printDemoHelp() {
+  console.log('\n╔═══════════════════════════════════════════════════════════╗');
+  console.log('║                    DEMO CONTROLS                          ║');
+  console.log('╠═══════════════════════════════════════════════════════════╣');
+  console.log('║  Commands:                                                ║');
+  console.log('║    play [scenario]  - Start/resume playback              ║');
+  console.log('║    pause            - Pause playback                      ║');
+  console.log('║    stop             - Stop and reset playback             ║');
+  console.log('║    list             - List available scenarios            ║');
+  console.log('║    load <name>      - Load a specific scenario            ║');
+  console.log('║    speed <1-10>     - Set playback speed                  ║');
+  console.log('║    status           - Show current status                 ║');
+  console.log('║    stats            - Show aggregator statistics          ║');
+  console.log('║    help             - Show this help                      ║');
+  console.log('║    quit             - Exit the application                ║');
+  console.log('╚═══════════════════════════════════════════════════════════╝\n');
+}
+
+function promptCommand() {
+  if (rl && !isShuttingDown) {
+    rl.question('demo> ', (input) => {
+      handleCommand(input.trim());
+    });
+  }
+}
+
+function handleCommand(input) {
+  if (!input) {
+    promptCommand();
+    return;
+  }
+  
+  const parts = input.split(/\s+/);
+  const command = parts[0].toLowerCase();
+  const args = parts.slice(1);
+  
+  switch (command) {
+    case 'play':
+      if (args[0]) {
+        // Load and play specific scenario
+        const loaded = demoMode.loadScenario(args[0]);
+        if (loaded) {
+          console.log(`   ✅ Loaded scenario: ${args[0]}`);
+          demoMode.play();
+          console.log('   ▶️  Playback started');
+        } else {
+          console.log(`   ❌ Scenario not found: ${args[0]}`);
+        }
+      } else {
+        demoMode.play();
+        console.log('   ▶️  Playback started/resumed');
+      }
+      break;
+      
+    case 'pause':
+      demoMode.pause();
+      console.log('   ⏸️  Playback paused');
+      break;
+      
+    case 'stop':
+      demoMode.stop();
+      console.log('   ⏹️  Playback stopped and reset');
+      break;
+      
+    case 'list':
+      const scenarios = demoMode.listScenarios();
+      console.log('\n   Available scenarios:');
+      scenarios.forEach((s, i) => {
+        console.log(`   ${i + 1}. ${s.name}`);
+        console.log(`      └─ ${s.description}`);
+        console.log(`      └─ Pair: ${s.pair}, Txs: ${s.transactionCount}`);
+      });
+      console.log('');
+      break;
+      
+    case 'load':
+      if (!args[0]) {
+        console.log('   ❌ Usage: load <scenario-name>');
+      } else {
+        const loaded = demoMode.loadScenario(args[0]);
+        if (loaded) {
+          console.log(`   ✅ Loaded: ${args[0]}`);
+        } else {
+          console.log(`   ❌ Scenario not found: ${args[0]}`);
+        }
+      }
+      break;
+      
+    case 'speed':
+      if (!args[0] || isNaN(args[0])) {
+        console.log('   ❌ Usage: speed <1-10>');
+      } else {
+        const speed = Math.max(1, Math.min(10, parseInt(args[0])));
+        demoMode.setSpeed(speed);
+        console.log(`   ⚡ Playback speed set to ${speed}x`);
+      }
+      break;
+      
+    case 'status':
+      const status = demoMode.getStatus();
+      console.log('\n   Demo Status:');
+      console.log(`   ├─ State: ${status.state}`);
+      console.log(`   ├─ Current scenario: ${status.currentScenario || 'none'}`);
+      console.log(`   ├─ Progress: ${status.currentIndex}/${status.totalTransactions}`);
+      console.log(`   ├─ Speed: ${status.speed}x`);
+      console.log(`   └─ Elapsed: ${status.elapsed}s\n`);
+      break;
+      
+    case 'stats':
+      const globalStats = pairAggregator.getGlobalStats();
+      console.log('\n   Aggregator Statistics:');
+      console.log(`   ├─ Total transactions: ${globalStats.total_transactions_processed}`);
+      console.log(`   ├─ Sandwiches detected: ${globalStats.total_sandwiches_detected}`);
+      console.log(`   ├─ Active pairs: ${globalStats.active_pairs}`);
+      console.log(`   └─ Uptime: ${globalStats.uptime_seconds}s\n`);
+      break;
+      
+    case 'help':
+      printDemoHelp();
+      break;
+      
+    case 'quit':
+    case 'exit':
+      shutdown('user-quit');
+      return;
+      
+    default:
+      console.log(`   ❌ Unknown command: ${command}. Type 'help' for commands.`);
+  }
+  
+  promptCommand();
 }
 
 // --------------------------------------------------
@@ -145,7 +297,10 @@ function printStatusSummary() {
   console.log('║    ← sandwich_alert      - Sandwich attack detected       ║');
   console.log('╚═══════════════════════════════════════════════════════════╝');
   console.log('');
-  console.log('Press Ctrl+C to stop the service.\n');
+  
+  if (!config.features.demoMode) {
+    console.log('Press Ctrl+C to stop the service.\n');
+  }
 }
 
 // --------------------------------------------------
@@ -160,6 +315,12 @@ async function shutdown(signal) {
   isShuttingDown = true;
   
   console.log(`\n\n🛑 Received ${signal}. Shutting down gracefully...\n`);
+  
+  // Close readline if open
+  if (rl) {
+    rl.close();
+    rl = null;
+  }
   
   try {
     // Shutdown in reverse order of initialization

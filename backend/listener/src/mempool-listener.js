@@ -1,4 +1,6 @@
+// src/mempool-listener.js
 // Connects to Alchemy WebSocket and streams pending transactions
+
 const { ethers } = require('ethers');
 const { config } = require('./config');
 const { MONITORED_ROUTERS } = require('./constants/addresses');
@@ -8,7 +10,7 @@ const { decodeTransaction, createTxSummary } = require('./transaction-decoder');
 let provider = null;
 let isConnected = false;
 let reconnectAttempts = 0;
-let subscription = null;
+let subscriptionId = null;
 
 // Statistics
 const stats = {
@@ -25,19 +27,19 @@ const stats = {
 let transactionsInLastMinute = 0;
 let rateResetInterval = null;
 
-// Callback for when transaction are decoded
+// Callback for when transactions are decoded
 let onTransactionCallback = null;
 
 // Configuration
-const RECONNECT_DELAY_BASE = 1000; // Start with 1 second
-const RECONNECT_DELAY_MAX = 30000; // Max 30 seconds
-const RECONNECT_MAX_ATTEMPTS = 50; // Give up after 50 attempts
+const RECONNECT_DELAY_BASE = 1000;
+const RECONNECT_DELAY_MAX = 30000;
+const RECONNECT_MAX_ATTEMPTS = 50;
 
 // Initialize the mempool listener
 async function initialize(onTransaction) {
-    console.log('\n Initializing mempool listener...');
+    console.log('\n🔌 Initializing mempool listener...');
 
-    // Store the callbacks
+    // Store the callback
     onTransactionCallback = onTransaction;
 
     // Start rate tracking
@@ -50,19 +52,20 @@ async function initialize(onTransaction) {
 // Connect to Alchemy WebSocket
 async function connect() {
     try {
-        console.log(`  Connecting to Alchemy WebSocket...`);
-        console.log(`  URL: ${config.alchemy.wsUrlBase}[API_KEY]`);
+        console.log(`   Connecting to Alchemy WebSocket...`);
+        console.log(`   URL: ${config.alchemy.wsUrlBase}[API_KEY]`);
 
         // Create WebSocket provider
         provider = new ethers.WebSocketProvider(config.alchemy.wsUrl);
 
-        // Set up event handlers
-        setupProviderEvents();
-
-        // Wait for connection to be established
+        // Wait for connection
         await provider.ready;
+        console.log(`   ✅ WebSocket connected`);
 
-        // Subscribe to pending transactions
+        // Set up the raw WebSocket message handler BEFORE subscribing
+        setupWebSocketHandler();
+
+        // Subscribe to pending transactions using Alchemy's enhanced API
         await subscribeToPendingTransactions();
 
         // Update state
@@ -72,80 +75,150 @@ async function connect() {
         stats.lastConnectedAt = new Date().toISOString();
         stats.reconnectAttempts = 0;
 
-        console.log(`  Connected to Alchemy WebSocket`);
-        console.log(`  Listening for Uniswap transaction...\n`);
+        console.log(`   ✅ Now listening for Uniswap transactions...\n`);
+
     } catch (error) {
-        console.error(`  Connection failed: ${error.message}`);
+        console.error(`   ❌ Connection failed: ${error.message}`);
         handleDisconnect();
     }
 }
 
-// Set up provider event handlers
-function setupProviderEvents() {
-    if (!provider) return;
+// Set up raw WebSocket message handler
+function setupWebSocketHandler() {
+    if (!provider || !provider.websocket) {
+        console.error('   ❌ No WebSocket available');
+        return;
+    }
+
+    // Handle incoming WebSocket messages directly
+    provider.websocket.on('message', (rawData) => {
+        try {
+            const data = JSON.parse(rawData);
+
+            // Check if this is a subscription notification
+            if (data.method === 'eth_subscription' && data.params) {
+                const result = data.params.result;
+
+                // Handle the transaction
+                if (result && typeof result === 'object' && result.hash) {
+                    // This is a full transaction object
+                    handlePendingTransaction(result);
+                } else if (typeof result === 'string') {
+                    // This is just a hash - we need to fetch the full transaction
+                    // For now, log it (we'll fix this below)
+                    // console.log(`   Received hash only: ${result.slice(0, 10)}...`);
+                    fetchAndHandleTransaction(result);
+                }
+            }
+        } catch (error) {
+            // Ignore non-JSON messages (like pings)
+        }
+    });
+
+    // Handle WebSocket close
+    provider.websocket.on('close', (code, reason) => {
+        console.log(`\n   ⚠️ WebSocket closed (code: ${code})`);
+        handleDisconnect();
+    });
 
     // Handle WebSocket errors
     provider.websocket.on('error', (error) => {
-        console.log(`\n WebSocket closed (code: ${code}`);
-        handleDisconnect();
+        console.error(`\n   ❌ WebSocket error: ${error.message}`);
     });
 }
 
 // Subscribe to pending transactions
 async function subscribeToPendingTransactions() {
-    console.log('  Subscribing to pending transactions...');
-    console.log(`  Filtering for routers: ${MONITORED_ROUTERS.length} address(es)`);
+    console.log('   Subscribing to pending transactions...');
+    console.log(`   Filtering for ${MONITORED_ROUTERS.length} router address(es)`);
 
-    // Use Alchemy's pending transaction subscription with filter
-    // This is more efficient than receiving all pending txs
-    subscription = await provider.send('eth_subscribe', [
-        'alchemy_pendingTransactions',
-        {
-            toAddress: MONITORED_ROUTERS,
-            hashesOnly: false // Get full transaction data
-        }
-    ]);
-
-    console.log(`   Subscription ID: ${subscription}`);
-
-    // Listen for pending transaction events
-    provider.on('pending', handlePendingTransaction);
-
-    // Also listen via the websocket message directly for Alchemy format
-    provider.websocket.on('message', (data) => {
-        try {
-            const parsed = JSON.parse(data);
-
-            // Check if this is a subscription result
-            if (parsed.method === 'eth_subscription' && parsed.params) {
-                const tx = parsed.params.result;
-                if (tx && tx.hash) {
-                    handlePendingTransaction(tx);
-                }
+    try {
+        // Use Alchemy's alchemy_pendingTransactions subscription
+        // This should return FULL transaction objects, not just hashes
+        subscriptionId = await provider.send('eth_subscribe', [
+            'alchemy_pendingTransactions',
+            {
+                toAddress: MONITORED_ROUTERS,
+                hashesOnly: false  // IMPORTANT: We want full transaction data
             }
-        } catch (error) {
-            // Ignore parse errors for non-JSON messages
+        ]);
+
+        console.log(`   ✅ Subscription ID: ${subscriptionId}`);
+        console.log(`   ✅ Requesting full transaction objects (hashesOnly: false)`);
+
+    } catch (error) {
+        console.error(`   ❌ Subscription failed: ${error.message}`);
+        
+        // Fall back to standard pending transactions if Alchemy-specific fails
+        console.log('   Trying fallback subscription method...');
+        try {
+            subscriptionId = await provider.send('eth_subscribe', ['newPendingTransactions']);
+            console.log(`   ⚠️ Using fallback (hash-only) subscription: ${subscriptionId}`);
+            console.log(`   ⚠️ Will need to fetch full transactions individually`);
+        } catch (fallbackError) {
+            throw new Error(`Both subscription methods failed: ${fallbackError.message}`);
         }
-    });
+    }
+}
+
+// Fetch full transaction data when we only receive a hash
+async function fetchAndHandleTransaction(txHash) {
+    try {
+        // Get the full transaction from the node
+        const tx = await provider.getTransaction(txHash);
+        
+        if (tx) {
+            // Convert to the format our decoder expects
+            const rawTx = {
+                hash: tx.hash,
+                from: tx.from,
+                to: tx.to,
+                value: tx.value?.toString() || '0',
+                input: tx.data,
+                gasPrice: tx.gasPrice?.toString(),
+                maxFeePerGas: tx.maxFeePerGas?.toString(),
+                maxPriorityFeePerGas: tx.maxPriorityFeePerGas?.toString(),
+                nonce: tx.nonce,
+                gas: tx.gasLimit?.toString()
+            };
+            
+            handlePendingTransaction(rawTx);
+        }
+    } catch (error) {
+        // Transaction might have been mined already or dropped
+        // This is normal, just ignore
+    }
 }
 
 // Handle incoming pending transaction
 function handlePendingTransaction(tx) {
     try {
+        // Basic validation
+        if (!tx || !tx.hash) {
+            return;
+        }
+
+        // Normalize the transaction object for our decoder
+        // Alchemy might send slightly different formats
+        const normalizedTx = {
+            hash: tx.hash,
+            from: tx.from,
+            to: tx.to,
+            value: tx.value?.toString() || tx.value || '0',
+            input: tx.input || tx.data || '0x',
+            gasPrice: tx.gasPrice?.toString() || tx.gasPrice,
+            maxFeePerGas: tx.maxFeePerGas?.toString() || tx.maxFeePerGas,
+            maxPriorityFeePerGas: tx.maxPriorityFeePerGas?.toString() || tx.maxPriorityFeePerGas,
+            nonce: tx.nonce,
+            gas: tx.gas || tx.gasLimit
+        };
+
         // Update stats
         stats.totalTransactionsReceived++;
         transactionsInLastMinute++;
 
-        // Handle both hash-only and full transaction formats
-        if (typeof tx === 'string') {
-            // This is just a hash, we'd need to fetch the full tx
-            // For Alchemy with hashesOnly: false, we shouldn't get this
-            console.log(`  Received hash only: ${tx.slice(0, 10)}...`);
-            return;
-        }
-
         // Decode the transaction
-        const decoded = decodeTransaction(tx);
+        const decoded = decodeTransaction(normalizedTx);
 
         if (decoded) {
             // Update stats
@@ -153,7 +226,7 @@ function handlePendingTransaction(tx) {
 
             // Log the transaction
             const summary = createTxSummary(decoded);
-            console.log(`  ${summary}`);
+            console.log(`  📊 ${summary}`);
 
             // Call the callback with decoded transaction
             if (onTransactionCallback) {
@@ -162,13 +235,12 @@ function handlePendingTransaction(tx) {
         }
 
     } catch (error) {
-        console.error(`  Error handling transaction: ${error.message}`);
+        console.error(`   ❌ Error handling transaction: ${error.message}`);
     }
 }
 
-// Handle Disconnection
+// Handle disconnection
 function handleDisconnect() {
-    // Update state
     isConnected = false;
     stats.connected = false;
     stats.lastDisconnectedAt = new Date().toISOString();
@@ -177,6 +249,9 @@ function handleDisconnect() {
     if (provider) {
         try {
             provider.removeAllListeners();
+            if (provider.websocket) {
+                provider.websocket.removeAllListeners();
+            }
             provider.destroy();
         } catch (error) {
             // Ignore cleanup errors
@@ -184,10 +259,11 @@ function handleDisconnect() {
         provider = null;
     }
 
+    subscriptionId = null;
+
     // Attempt reconnection
     scheduleReconnect();
 }
-
 
 // Schedule a reconnection attempt
 function scheduleReconnect() {
@@ -195,29 +271,26 @@ function scheduleReconnect() {
     stats.reconnectAttempts = reconnectAttempts;
 
     if (reconnectAttempts > RECONNECT_MAX_ATTEMPTS) {
-        console.error(`\n Max reconnection attempts (${RECONNECT_MAX_ATTEMPTS}) reached. Giving up.`);
-        console.error(' Please check your Alchemy API key and network connection.');
+        console.error(`\n❌ Max reconnection attempts (${RECONNECT_MAX_ATTEMPTS}) reached.`);
+        console.error('   Please check your Alchemy API key and network connection.');
         return;
     }
 
-    // Calculate delay with exponential backoff
     const delay = Math.min(
         RECONNECT_DELAY_BASE * Math.pow(2, reconnectAttempts - 1),
         RECONNECT_DELAY_MAX
     );
 
-    console.log(`\n Reconnecting in ${delay / 1000} seconds... (attempt ${reconnectAttempts}/${RECONNECT_MAX_ATTEMPTS})`);
+    console.log(`\n🔄 Reconnecting in ${delay / 1000}s... (attempt ${reconnectAttempts}/${RECONNECT_MAX_ATTEMPTS})`);
 
     setTimeout(async () => {
-        console.log(`\n Reconnection attempt ${reconnectAttempts}...`);
+        console.log(`\n🔄 Reconnection attempt ${reconnectAttempts}...`);
         await connect();
     }, delay);
 }
 
-// Start Rate tracking
-// Calculates transactions per minute
+// Start rate tracking
 function startRateTracking() {
-    // Reset counter very minute
     rateResetInterval = setInterval(() => {
         stats.transactionsPerMinute = transactionsInLastMinute;
         transactionsInLastMinute = 0;
@@ -247,16 +320,15 @@ function isListenerConnected() {
 
 // Graceful shutdown
 async function shutdown() {
-    console.log('\n Shutting down mempool listener...');
+    console.log('\n🛑 Shutting down mempool listener...');
 
-    // Stop rate tracking
     stopRateTracking();
 
     // Unsubscribe if we have an active subscription
-    if (subscription && provider) {
+    if (subscriptionId && provider) {
         try {
-            await provider.send('eth_unsubscribe', [subscription]);
-            console.log('   Unsubscribe from pending transactions');
+            await provider.send('eth_unsubscribe', [subscriptionId]);
+            console.log('   ✅ Unsubscribed from pending transactions');
         } catch (error) {
             // Ignore unsubscribe errors during shutdown
         }
@@ -266,6 +338,9 @@ async function shutdown() {
     if (provider) {
         try {
             provider.removeAllListeners();
+            if (provider.websocket) {
+                provider.websocket.removeAllListeners();
+            }
             provider.destroy();
         } catch (error) {
             // Ignore cleanup errors
@@ -275,8 +350,9 @@ async function shutdown() {
 
     isConnected = false;
     stats.connected = false;
+    subscriptionId = null;
 
-    console.log('   Mempool listener shut down');
+    console.log('   ✅ Mempool listener shut down');
 }
 
 // Export

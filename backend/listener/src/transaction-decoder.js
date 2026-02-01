@@ -112,6 +112,11 @@ function decodeTransaction(tx) {
             // Swap details
             method: methodName,
 
+            // Capture script
+            tokenInSymbol: tokenInfo.tokenIn.symbol,
+            tokenOutSymbol: tokenInfo.tokenOut.symbol,
+            type: tokenInfo.direction,
+
             // Token information
             tokenIn: tokenInfo.tokenIn,
             tokenOut: tokenInfo.tokenOut,
