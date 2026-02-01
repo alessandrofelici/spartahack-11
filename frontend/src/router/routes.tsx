@@ -9,8 +9,8 @@ export const router = createBrowserRouter([
     path: "/",
     element: <Layout />,
     children: [
+      { index: true, element: <Information /> },
       { path: "best-practices", element: <BestPractices /> },
-      { path: "information", element: <Information /> },
       { path: "slippage-estimates", element: <SlippageEstimates /> },
     ],
   },
