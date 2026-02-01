@@ -1,0 +1,50 @@
+{
+  "name": "Greatest Hits",
+  "description": "Curated collection of the most dramatic sandwich attacks",
+  "pair": "MIXED",
+  "duration_seconds": 120,
+  "transactions": [
+    {
+      "txHash": "0xREAL_SANDWICH_1_0000000000000000000000000000000000000000",
+      "from": "0x00000000003b3cc22af3ae1eac0440bcee416b40",
+      "to": "0x7a250d5630b4cf539739df2c5dacb4c659f2488d",
+      "gasPriceGwei": 250,
+      "method": "swapExactETHForTokens",
+      "tokenIn": { "symbol": "WETH", "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "decimals": 18 },
+      "tokenOut": { "symbol": "PEPE", "address": "0x6982508145454ce325ddbe47a25d4ec3d2311933", "decimals": 18 },
+      "amountIn": "5.0",
+      "direction": "buy",
+      "pair": "PEPE-WETH",
+      "timestamp": 1738368000000,
+      "isSuspicious": true
+    },
+    {
+      "txHash": "0xREAL_VICTIM_1_00000000000000000000000000000000000000000",
+      "from": "0x1234567890123456789012345678901234567890",
+      "to": "0x7a250d5630b4cf539739df2c5dacb4c659f2488d",
+      "gasPriceGwei": 45,
+      "method": "swapExactETHForTokens",
+      "tokenIn": { "symbol": "WETH", "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "decimals": 18 },
+      "tokenOut": { "symbol": "PEPE", "address": "0x6982508145454ce325ddbe47a25d4ec3d2311933", "decimals": 18 },
+      "amountIn": "10.0",
+      "direction": "buy",
+      "pair": "PEPE-WETH",
+      "timestamp": 1738368000500,
+      "isSuspicious": false
+    },
+    {
+      "txHash": "0xREAL_BACKRUN_1_0000000000000000000000000000000000000000",
+      "from": "0x00000000003b3cc22af3ae1eac0440bcee416b40",
+      "to": "0x7a250d5630b4cf539739df2c5dacb4c659f2488d",
+      "gasPriceGwei": 248,
+      "method": "swapExactTokensForETH",
+      "tokenIn": { "symbol": "PEPE", "address": "0x6982508145454ce325ddbe47a25d4ec3d2311933", "decimals": 18 },
+      "tokenOut": { "symbol": "WETH", "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "decimals": 18 },
+      "amountIn": "5000000000000000000",
+      "direction": "sell",
+      "pair": "PEPE-WETH",
+      "timestamp": 1738368001000,
+      "isSuspicious": true
+    }
+  ]
+}

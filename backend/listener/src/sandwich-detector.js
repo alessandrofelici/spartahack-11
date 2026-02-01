@@ -52,7 +52,7 @@ function initialize(onSandwich) {
     cleanupInterval = setInterval(cleanupOldTransactions, CONFIG.CLEANUP_INTERVAL_MS);
 
     console.log(`   Time window: ${CONFIG.TIME_WINDOW_MS / 1000}s`);
-    console.log(`   Min gas ration: ${CONFIG.MIN_GAS_RATION}x`);
+    console.log(`   Min gas ratio: ${CONFIG.MIN_GAS_RATIO}x`);
     console.log(`   Sandwich detector ready\n`);
 }
 
