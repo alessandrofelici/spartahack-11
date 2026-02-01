@@ -11,56 +11,56 @@ const routerInterface = new ethers.Interface(UNISWAP_V2_ROUTER_ABI)
 // Swap method configurations
 // Different methods have different parameter structures
 const SWAP_CONFIGS = {
-  // ETH -> Token (ETH is input)
-  swapExactETHForTokens: {
-    ethPosition: 'in',
-    amountField: 'value',      // Amount comes from tx.value, not input data
-    minMaxField: 'amountOutMin'
-  },
-  swapETHForExactTokens: {
-    ethPosition: 'in',
-    amountField: 'value',
-    minMaxField: 'amountOut'
-  },
-  swapExactETHForTokensSupportingFeeOnTransferTokens: {
-    ethPosition: 'in',
-    amountField: 'value',
-    minMaxField: 'amountOutMin'
-  },
-  
-  // Token -> ETH (ETH is output)
-  swapExactTokensForETH: {
-    ethPosition: 'out',
-    amountField: 'amountIn',
-    minMaxField: 'amountOutMin'
-  },
-  swapTokensForExactETH: {
-    ethPosition: 'out',
-    amountField: 'amountInMax',
-    minMaxField: 'amountOut'
-  },
-  swapExactTokensForETHSupportingFeeOnTransferTokens: {
-    ethPosition: 'out',
-    amountField: 'amountIn',
-    minMaxField: 'amountOutMin'
-  },
-  
-  // Token -> Token (no ETH involved)
-  swapExactTokensForTokens: {
-    ethPosition: 'none',
-    amountField: 'amountIn',
-    minMaxField: 'amountOutMin'
-  },
-  swapTokensForExactTokens: {
-    ethPosition: 'none',
-    amountField: 'amountInMax',
-    minMaxField: 'amountOut'
-  },
-  swapExactTokensForTokensSupportingFeeOnTransferTokens: {
-    ethPosition: 'none',
-    amountField: 'amountIn',
-    minMaxField: 'amountOutMin'
-  }
+    // ETH -> Token (ETH is input)
+    swapExactETHForTokens: {
+        ethPosition: 'in',
+        amountField: 'value',      // Amount comes from tx.value, not input data
+        minMaxField: 'amountOutMin'
+    },
+    swapETHForExactTokens: {
+        ethPosition: 'in',
+        amountField: 'value',
+        minMaxField: 'amountOut'
+    },
+    swapExactETHForTokensSupportingFeeOnTransferTokens: {
+        ethPosition: 'in',
+        amountField: 'value',
+        minMaxField: 'amountOutMin'
+    },
+
+    // Token -> ETH (ETH is output)
+    swapExactTokensForETH: {
+        ethPosition: 'out',
+        amountField: 'amountIn',
+        minMaxField: 'amountOutMin'
+    },
+    swapTokensForExactETH: {
+        ethPosition: 'out',
+        amountField: 'amountInMax',
+        minMaxField: 'amountOut'
+    },
+    swapExactTokensForETHSupportingFeeOnTransferTokens: {
+        ethPosition: 'out',
+        amountField: 'amountIn',
+        minMaxField: 'amountOutMin'
+    },
+
+    // Token -> Token (no ETH involved)
+    swapExactTokensForTokens: {
+        ethPosition: 'none',
+        amountField: 'amountIn',
+        minMaxField: 'amountOutMin'
+    },
+    swapTokensForExactTokens: {
+        ethPosition: 'none',
+        amountField: 'amountInMax',
+        minMaxField: 'amountOut'
+    },
+    swapExactTokensForTokensSupportingFeeOnTransferTokens: {
+        ethPosition: 'none',
+        amountField: 'amountIn',
+        minMaxField: 'amountOutMin'
+    }
 };
 
 // Main decode function
@@ -152,6 +152,7 @@ function decodeTransaction(tx) {
     }
 }
 
+
 // Validate that this transaction is one we care about
 function isValidSwapTransaction(tx) {
     // Must have destination address
@@ -186,7 +187,7 @@ function decodeInputData(input, methodName) {
         if (!parsed) {
             return null;
         }
-        
+
         // Extract the arguments
         const args = parsed.args;
 
@@ -225,7 +226,7 @@ function extractTokenInfo(path, methodName, txValue) {
     if (!path || path.length < 2) {
         return null;
     }
-    
+
     // Get swap configuration for this metho
     const config = SWAP_CONFIGS[methodName];
     if (!config) {
